@@ -20,7 +20,6 @@ using namespace valhalla::baldr;
 namespace {
 
 const boost::gregorian::date pivot_date_ = boost::gregorian::from_undelimited_string(kPivotDate);
-
 }
 
 namespace valhalla {

@@ -86,8 +86,7 @@ void TryGetServiceDays(bool check_b_date,
   auto b = get_formatted_date(begin_date);
   auto e = get_formatted_date(end_date);
   auto tz = DateTime::get_tz_db().from_index(DateTime::get_tz_db().to_index("America/New_York"));
-  auto tile_date =
-      days_from_pivot_date(get_formatted_date(DateTime::iso_date_time(tz)));
+  auto tile_date = days_from_pivot_date(get_formatted_date(DateTime::iso_date_time(tz)));
 
   uint64_t days = get_service_days(b, e, tile_date, dow_mask);
 
@@ -111,8 +110,7 @@ void TryRejectFeed(const std::string& begin_date,
   auto e = get_formatted_date(end_date);
   auto tz = DateTime::get_tz_db().from_index(DateTime::get_tz_db().to_index("America/New_York"));
 
-  auto tile_date =
-      days_from_pivot_date(get_formatted_date(DateTime::iso_date_time(tz)));
+  auto tile_date = days_from_pivot_date(get_formatted_date(DateTime::iso_date_time(tz)));
 
   uint64_t days = get_service_days(b, e, tile_date, dow_mask);
 

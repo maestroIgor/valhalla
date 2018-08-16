@@ -250,23 +250,23 @@ static uint32_t days_from_pivot_date(const std::string& date_time) {
  */
 static uint32_t day_of_week_mask(const std::string& date_time) {
   switch (day_of_week(date_time)) {
-     case 0:
-       return kSunday;
-     case 1:
-       return kMonday;
-     case 2:
-       return kTuesday;
-     case 3:
-       return kWednesday;
-     case 4:
-       return kThursday;
-     case 5:
-       return kFriday;
-     case 6:
-       return kSaturday;
-     default:
-       return kDOWNone;
-   }
+    case 0:
+      return kSunday;
+    case 1:
+      return kMonday;
+    case 2:
+      return kTuesday;
+    case 3:
+      return kWednesday;
+    case 4:
+      return kThursday;
+    case 5:
+      return kFriday;
+    case 6:
+      return kSaturday;
+    default:
+      return kDOWNone;
+  }
 }
 
 } // namespace DateTime
