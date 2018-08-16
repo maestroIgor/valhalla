@@ -33,6 +33,20 @@ namespace mjolnir {
 std::string get_testing_date_time();
 
 /**
+ * Get a formatted date from a string.
+ * @param date in the format of 20150516 or 2015-05-06T08:00
+ * @return  Returns the formatted date.
+ */
+boost::gregorian::date get_formatted_date(const std::string& date);
+
+/**
+ * Get the number of days elapsed from the pivot date until the input date.
+ * @param   date_time date
+ * @return  Returns the number of days.
+ */
+uint32_t days_from_pivot_date(const boost::gregorian::date& date_time);
+
+/**
  * Get the days that this transit service is running in 60 days or less
  * @param   start_date start date
  * @param   end_date end date

@@ -20,6 +20,7 @@ using namespace valhalla::baldr;
 namespace {
 
 const boost::gregorian::date pivot_date_ = boost::gregorian::from_undelimited_string(kPivotDate);
+
 }
 
 namespace valhalla {
@@ -57,24 +58,7 @@ const tz_db_t& get_tz_db() {
   return tz_db;
 }
 
-// get a formatted date.
-boost::gregorian::date get_formatted_date(const std::string& date) {
-  boost::gregorian::date d;
-  if (date.find('T') != std::string::npos) {
-    std::string dt = date;
-    dt.erase(std::remove_if(dt.begin(), dt.end(),
-                            [](char x) { return x == '-' || x == ',' || x == ':'; }));
-    d = boost::gregorian::date_from_iso_string(dt);
-  } else if (date.find('-') != std::string::npos) {
-    std::string dt = date;
-    dt.erase(std::remove_if(dt.begin(), dt.end(), [](char x) { return x == '-'; }));
-    d = boost::gregorian::from_undelimited_string(dt);
-  } else {
-    d = boost::gregorian::from_undelimited_string(date);
-  }
-  return d;
-}
-
+// NOTE - get_ldt is only used within DateTime methods here...
 // get a local_date_time with support for dst.
 // 2016-11-06T02:00 ---> 2016-11-06T01:00
 boost::local_time::local_date_time get_ldt(const boost::gregorian::date& date,
@@ -104,16 +88,6 @@ boost::local_time::local_date_time get_ldt(const boost::gregorian::date& date,
     }
   }
   return in_local_time;
-}
-
-// Get the number of days that have elapsed from the pivot date for the inputed date.
-// date_time is in the format of 20150516 or 2015-05-06T08:00
-uint32_t days_from_pivot_date(const boost::gregorian::date& date_time) {
-  if (date_time <= pivot_date_) {
-    return 0;
-  }
-  boost::gregorian::date_period range(pivot_date_, date_time);
-  return static_cast<uint32_t>(range.length().days());
 }
 
 // Get the current iso date and time.
@@ -278,6 +252,7 @@ int timezone_diff(const bool is_depart_at,
   } catch (std::exception& e) {}
 }
 
+// NOTE - only used in TripPathBuilder
 // Get the date from seconds and timezone.
 void seconds_to_date(const bool is_depart_at,
                      const uint64_t origin_seconds,
@@ -427,49 +402,13 @@ void seconds_to_date(const bool is_depart_at,
   } catch (std::exception& e) {}
 }
 
-// Get the dow mask
-// date_time is in the format of 20150516 or 2015-05-06T08:00
-uint32_t day_of_week_mask(const std::string& date_time) {
-  boost::gregorian::date date;
-  date = get_formatted_date(date_time);
-
-  if (date < pivot_date_) {
-    return kDOWNone;
-  }
-
-  boost::gregorian::greg_weekday wd = date.day_of_week();
-
-  switch (wd.as_enum()) {
-    case boost::date_time::Sunday:
-      return kSunday;
-      break;
-    case boost::date_time::Monday:
-      return kMonday;
-      break;
-    case boost::date_time::Tuesday:
-      return kTuesday;
-      break;
-    case boost::date_time::Wednesday:
-      return kWednesday;
-      break;
-    case boost::date_time::Thursday:
-      return kThursday;
-      break;
-    case boost::date_time::Friday:
-      return kFriday;
-      break;
-    case boost::date_time::Saturday:
-      return kSaturday;
-      break;
-  }
-  return kDOWNone;
-}
-
+// NOTE - get_duration is only used in TripPathBuilder to format an arrival string
 // add x seconds to a date_time and return a ISO date_time string.
-// date_time is in the format of 20150516 or 2015-05-06T08:00
+// date_time is in ISO format: 2015-05-06T08:00
 std::string get_duration(const std::string& date_time,
                          const uint32_t seconds,
                          const boost::local_time::time_zone_ptr& tz) {
+  // NOTE - assume the date_time string is valid (validated on request parsing)
   std::string formatted_date_time;
   boost::posix_time::ptime start;
   boost::gregorian::date date;

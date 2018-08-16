@@ -13,13 +13,41 @@ namespace mjolnir {
 // Get a formatted testing date.  Currently, next Tuesday @ 08:00.
 std::string get_testing_date_time() {
   auto tz = DateTime::get_tz_db().from_index(DateTime::get_tz_db().to_index("America/New_York"));
-  boost::gregorian::date d = DateTime::get_formatted_date(DateTime::iso_date_time(tz));
+  boost::gregorian::date d = get_formatted_date(DateTime::iso_date_time(tz));
 
   while (d.day_of_week() != boost::date_time::Tuesday) {
     d += boost::gregorian::days(1);
   }
 
   return to_iso_extended_string(d) + "T08:00";
+}
+
+// get a formatted date.
+boost::gregorian::date get_formatted_date(const std::string& date) {
+  boost::gregorian::date d;
+  if (date.find('T') != std::string::npos) {
+    std::string dt = date;
+    dt.erase(std::remove_if(dt.begin(), dt.end(),
+                            [](char x) { return x == '-' || x == ',' || x == ':'; }));
+    d = boost::gregorian::date_from_iso_string(dt);
+  } else if (date.find('-') != std::string::npos) {
+    std::string dt = date;
+    dt.erase(std::remove_if(dt.begin(), dt.end(), [](char x) { return x == '-'; }));
+    d = boost::gregorian::from_undelimited_string(dt);
+  } else {
+    d = boost::gregorian::from_undelimited_string(date);
+  }
+  return d;
+}
+
+// Get the number of days that have elapsed from the pivot date for the inputed date.
+// date_time is in the format of 20150516 or 2015-05-06T08:00
+uint32_t days_from_pivot_date(const boost::gregorian::date& date_time) {
+  if (date_time <= pivot_date_) {
+    return 0;
+  }
+  boost::gregorian::date_period range(pivot_date_, date_time);
+  return static_cast<uint32_t>(range.length().days());
 }
 
 // Get the days that this transit service is running in 60 days or less

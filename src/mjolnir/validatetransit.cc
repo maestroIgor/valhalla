@@ -56,7 +56,7 @@ bool WalkTransitLines(const GraphId& n_graphId,
   uint32_t tripid = 0;
   uint32_t j = 0;
   uint32_t localtime = DateTime::seconds_from_midnight(date_time);
-  uint32_t date = DateTime::days_from_pivot_date(DateTime::get_formatted_date(date_time));
+  uint32_t date = days_from_pivot_date(get_formatted_date(date_time));
   uint32_t dow = DateTime::day_of_week_mask(date_time);
   uint32_t date_created = endnodetile->header()->date_created();
   uint32_t day = 0;

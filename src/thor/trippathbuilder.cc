@@ -927,7 +927,7 @@ TripPathBuilder::Build(const AttributesController& controller,
         assumed_schedule = false;
         uint32_t date, day = 0;
         if (origin.has_date_time()) {
-          date = DateTime::days_from_pivot_date(DateTime::get_formatted_date(origin.date_time()));
+          date = DateTime::days_from_pivot_date(origin.date_time());
 
           if (graphtile->header()->date_created() > date) {
             // Set assumed schedule if requested

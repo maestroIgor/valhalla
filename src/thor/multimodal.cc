@@ -276,7 +276,7 @@ MultiModalPathAlgorithm::GetBestPath(odin::Location& origin,
       // we must get the date from level 3 transit tiles and not level 2.  The level 3 date is
       // set when the fetcher grabbed the transit data and created the schedules.
       if (!date_set) {
-        date = DateTime::days_from_pivot_date(DateTime::get_formatted_date(origin.date_time()));
+        date = DateTime::days_from_pivot_date(origin.date_time());
         dow = DateTime::day_of_week_mask(origin.date_time());
         uint32_t date_created = tile->header()->date_created();
         if (date < date_created) {

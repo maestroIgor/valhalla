@@ -39,31 +39,6 @@ protected:
 const tz_db_t& get_tz_db();
 
 /**
- * Get a formatted date from a string.
- * @param date in the format of 20150516 or 2015-05-06T08:00
- * @return  Returns the formatted date.
- */
-boost::gregorian::date get_formatted_date(const std::string& date);
-
-/**
- * Get a local_date_time with support for dst.
- * @param date            Date
- * @param time_duration   Time
- * @param time_zone       Timezone
- * @return Returns local date time.
- */
-boost::local_time::local_date_time get_ldt(const boost::gregorian::date& date,
-                                           const boost::posix_time::time_duration& time_duration,
-                                           const boost::local_time::time_zone_ptr& time_zone);
-
-/**
- * Get the number of days elapsed from the pivot date until the input date.
- * @param   date_time date
- * @return  Returns the number of days.
- */
-uint32_t days_from_pivot_date(const boost::gregorian::date& date_time);
-
-/**
  * Get the iso date and time from the current date and time.
  * @param   time_zone        Timezone.
  * @return  Returns the formated date 2015-05-06.
@@ -110,13 +85,6 @@ void seconds_to_date(const bool is_depart_at,
                      const boost::local_time::time_zone_ptr& dest_tz,
                      std::string& iso_origin,
                      std::string& iso_dest);
-
-/**
- * Get the dow mask.
- * @param   date_time in the format of 20150516 or 2015-05-06T08:00
- * @return  Returns the dow mask.
- */
-uint32_t day_of_week_mask(const std::string& date_time);
 
 /**
  * Add x seconds to a date_time and return a ISO date_time string.
@@ -256,6 +224,49 @@ static int32_t normalize_seconds_of_week(const int32_t secs) {
   } else {
     return secs;
   }
+}
+
+/**
+ * Get the number of days elapsed from the pivot date until the input date.
+ * @param   date_time date time string (2015-05-06T08:00)
+ * @return  Returns the number of days.
+ */
+static uint32_t days_from_pivot_date(const std::string& date_time) {
+  // Seconds since epoch for the specified date time
+  std::tm t = iso_to_tm(date_time);
+  auto sec = std::mktime(&t);
+
+  // Pivot date for transit schedules
+  std::string kPivotDateStr("2014-01-01T00:00");
+  std::tm pivot_tm = iso_to_tm(kPivotDateStr);
+  auto pivot = std::mktime(&pivot_tm);
+  return (sec - pivot) / midgard::kSecondsPerDay;
+}
+
+/**
+ * Get the dow mask.
+ * @param   date_time in the format: 2015-05-06T08:00
+ * @return  Returns the dow mask.
+ */
+static uint32_t day_of_week_mask(const std::string& date_time) {
+  switch (day_of_week(date_time)) {
+     case 0:
+       return kSunday;
+     case 1:
+       return kMonday;
+     case 2:
+       return kTuesday;
+     case 3:
+       return kWednesday;
+     case 4:
+       return kThursday;
+     case 5:
+       return kFriday;
+     case 6:
+       return kSaturday;
+     default:
+       return kDOWNone;
+   }
 }
 
 } // namespace DateTime
