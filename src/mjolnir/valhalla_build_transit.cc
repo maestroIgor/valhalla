@@ -2116,8 +2116,7 @@ void build_tiles(const boost::property_tree::ptree& pt,
     GraphTileBuilder tilebuilder_transit(reader_transit_level.tile_dir(), transit_tile_id, false);
 
     auto tz = DateTime::get_tz_db().from_index(DateTime::get_tz_db().to_index("America/New_York"));
-    uint32_t tile_creation_date =
-        days_from_pivot_date(get_formatted_date(DateTime::iso_date_time(tz)));
+    uint32_t tile_creation_date = days_from_pivot_date(get_formatted_date(iso_date_time(tz)));
     tilebuilder_transit.AddTileCreationDate(tile_creation_date);
 
     lock.unlock();

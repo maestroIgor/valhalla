@@ -16,90 +16,13 @@ using namespace valhalla::baldr;
 
 namespace {
 
-// Get the iso date and time from a DOW mask and time.
-std::string test_iso_date_time(const uint8_t dow_mask,
-                               const std::string& time,
-                               const boost::local_time::time_zone_ptr& time_zone) {
-
-  std::string iso_date_time;
-  std::stringstream ss("");
-  if (time.empty() || time.find(':') == std::string::npos || !time_zone) {
-    return iso_date_time;
-  }
-
-  uint8_t dow;
-  switch (dow_mask) {
-    case kSunday:
-      dow = boost::date_time::Sunday;
-      break;
-    case kMonday:
-      dow = boost::date_time::Monday;
-      break;
-    case kTuesday:
-      dow = boost::date_time::Tuesday;
-      break;
-    case kWednesday:
-      dow = boost::date_time::Wednesday;
-      break;
-    case kThursday:
-      dow = boost::date_time::Thursday;
-      break;
-    case kFriday:
-      dow = boost::date_time::Friday;
-      break;
-    case kSaturday:
-      dow = boost::date_time::Saturday;
-      break;
-    default:
-      return iso_date_time;
-      break;
-  }
-
-  try {
-    boost::local_time::local_time_input_facet* input_facet =
-        new boost::local_time::local_time_input_facet();
-    input_facet->format("%H:%M");
-    ss.imbue(std::locale(ss.getloc(), input_facet));
-
-    boost::local_time::local_date_time desired_time(boost::local_time::not_a_date_time);
-    ss.str(time);
-    ss >> desired_time;
-
-    boost::posix_time::ptime pt = boost::posix_time::second_clock::universal_time();
-    boost::local_time::local_date_time local_date_time(pt, time_zone);
-
-    pt = local_date_time.local_time();
-    boost::gregorian::date date = pt.date();
-    uint8_t desired_tod =
-        (3600 * desired_time.time_of_day().hours()) + (60 * desired_time.time_of_day().minutes());
-    uint8_t current_tod = (3600 * pt.time_of_day().hours()) + (60 * pt.time_of_day().minutes());
-
-    // will today work?
-    if (date.day_of_week().as_enum() == dow) {
-      // is the desired time in the past?
-      if (desired_tod < current_tod) {
-        date += boost::gregorian::days(7);
-      }
-    } else {
-      while (date.day_of_week().as_enum() != dow) {
-        date += boost::gregorian::days(1);
-      }
-    }
-    iso_date_time = to_iso_extended_string(date) + "T" + time;
-  } catch (std::exception& e) {}
-  return iso_date_time;
-}
-
-std::vector<std::string> GetTagTokens(const std::string& tag_value, char delim) {
-  std::vector<std::string> tokens;
-  boost::algorithm::split(tokens, tag_value, std::bind1st(std::equal_to<char>(), delim),
-                          boost::algorithm::token_compress_on);
-  return tokens;
-}
+// TODO - test get_local_time
 
 void TryGetDaysFromPivotDate(const std::string& date_time, uint32_t expected_days) {
-  if (DateTime::days_from_pivot_date(date_time) != expected_days) {
-    throw std::runtime_error(std::string("Incorrect number of days from ") + date_time);
+  uint32_t days = DateTime::days_from_pivot_date(date_time);
+  if (days != expected_days) {
+    throw std::runtime_error(std::string("Incorrect number of days from ") + date_time +
+                             " days = " + std::to_string(days));
   }
 }
 
@@ -128,44 +51,6 @@ void TryGetSecondsFromMidnight(const std::string& date_time, uint32_t expected_s
   if (secs != expected_seconds) {
     throw std::runtime_error(std::string("Incorrect number of seconds from ") + date_time +
                              " got: " + std::to_string(secs));
-  }
-}
-
-void TryIsoDateTime() {
-
-  auto tz = DateTime::get_tz_db().from_index(DateTime::get_tz_db().to_index("America/New_York"));
-
-  std::string current_date_time = DateTime::iso_date_time(tz);
-  std::string time;
-  std::size_t found = current_date_time.find("T"); // YYYY-MM-DDTHH:MM
-  if (found != std::string::npos)
-    time = current_date_time.substr(found + 1);
-
-  if (test_iso_date_time(DateTime::day_of_week_mask(current_date_time), time, tz) !=
-      current_date_time) {
-    throw std::runtime_error(std::string("Iso date time failed ") + current_date_time);
-  }
-
-  tz = DateTime::get_tz_db().from_index(DateTime::get_tz_db().to_index("America/Chicago"));
-  current_date_time = DateTime::iso_date_time(tz);
-  found = current_date_time.find("T"); // YYYY-MM-DDTHH:MM
-  if (found != std::string::npos)
-    time = current_date_time.substr(found + 1);
-
-  if (test_iso_date_time(DateTime::day_of_week_mask(current_date_time), time, tz) !=
-      current_date_time) {
-    throw std::runtime_error(std::string("Iso date time failed ") + current_date_time);
-  }
-
-  tz = DateTime::get_tz_db().from_index(DateTime::get_tz_db().to_index("Africa/Porto-Novo"));
-  current_date_time = DateTime::iso_date_time(tz);
-  found = current_date_time.find("T"); // YYYY-MM-DDTHH:MM
-  if (found != std::string::npos)
-    time = current_date_time.substr(found + 1);
-
-  if (test_iso_date_time(DateTime::day_of_week_mask(current_date_time), time, tz) !=
-      current_date_time) {
-    throw std::runtime_error(std::string("Iso date time failed ") + current_date_time);
   }
 }
 
@@ -290,31 +175,17 @@ void TryTestTimezoneDiff(const bool is_depart,
 } // namespace
 
 void TestGetDaysFromPivotDate() {
-  // TODO - update this test!
-  /**  TryGetDaysFromPivotDate("20140101", 0);
-    TryGetDaysFromPivotDate("20140102", 1);
-    TryGetDaysFromPivotDate("19990101", 0);
-    TryGetDaysFromPivotDate("20150506", 490);
-    TryGetDaysFromPivotDate("2015-05-06", 490);
-
-    TryGetDaysFromPivotDate("20140101T07:01", 0);
-    TryGetDaysFromPivotDate("20140102T15:00", 1);
-    TryGetDaysFromPivotDate("19990101T:00:00", 0); **/
+  // Test using ISO strings
+  TryGetDaysFromPivotDate("2014-01-01T12:25", 0);
+  TryGetDaysFromPivotDate("2014-01-02T23:59", 1);
   TryGetDaysFromPivotDate("2015-05-06T08:00", 490);
+
+  // Before the pivot date - should return 0
+  TryGetDaysFromPivotDate("1990-01-06T08:00", 0);
 }
 
 void TestDOW() {
-  // TODO - add more tests. We assume that the date string is valid ISO
-  /**  TryGetDOW("20140101", kWednesday);
-
-    TryGetDOW("19990101", kDOWNone);
-    TryGetDOW("20150508", kFriday);
-    TryGetDOW("20140102T15:00", kThursday);
-    TryGetDOW("19990101T:00:00", kDOWNone);**/
-  // Test invalid date_time string
-  // TryGetDOW("19990101", kDOWNone);
-
-  // Try valid strings
+  // Assume that the date string is valid ISO
   TryGetDOW("2014-01-02T12:25", kThursday);
   TryGetDOW("2015-05-09T08:00", kSaturday);
   TryGetDOW("2015-05-08T00:00", kFriday);
@@ -333,10 +204,6 @@ void TestDuration() {
   TryGetDuration("20140102T15:00", 61, "2014-01-02T15:01-05:00 EST");
   TryGetDuration("20140102T15:00", 86400, "2014-01-03T15:00-05:00 EST");
   TryGetDuration("20160714", 60, "2016-07-14T00:01-04:00 EDT");
-}
-
-void TestIsoDateTime() {
-  TryIsoDateTime();
 }
 
 void TestGetSecondsFromMidnight() {
@@ -659,6 +526,16 @@ void TestISOToTm() {
   }
 }
 
+void TestTmToISO() {
+  std::string date = "2018-07-22T10:09";
+  std::tm t = DateTime::iso_to_tm(date);
+  std::string inv = DateTime::tm_to_iso(t);
+  std::cout << " inv = " << inv << std::endl;
+  if (date != inv) {
+    throw std::runtime_error("DateTime::tm_to_iso min failed");
+  }
+}
+
 int main(void) {
   test::suite suite("datetime");
 
@@ -666,7 +543,6 @@ int main(void) {
   suite.test(TEST_CASE(TestGetSecondsFromMidnight));
   suite.test(TEST_CASE(TestDOW));
   suite.test(TEST_CASE(TestDuration));
-  suite.test(TEST_CASE(TestIsoDateTime));
   suite.test(TEST_CASE(TestIsValid));
   suite.test(TEST_CASE(TestIsRestricted));
   suite.test(TEST_CASE(TestDST));
@@ -674,6 +550,7 @@ int main(void) {
   suite.test(TEST_CASE(TestDayOfWeek));
 
   suite.test(TEST_CASE(TestISOToTm));
+  suite.test(TEST_CASE(TestTmToISO));
 
   return suite.tear_down();
 }

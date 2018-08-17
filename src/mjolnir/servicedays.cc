@@ -13,13 +13,41 @@ namespace mjolnir {
 // Get a formatted testing date.  Currently, next Tuesday @ 08:00.
 std::string get_testing_date_time() {
   auto tz = DateTime::get_tz_db().from_index(DateTime::get_tz_db().to_index("America/New_York"));
-  boost::gregorian::date d = get_formatted_date(DateTime::iso_date_time(tz));
+  boost::gregorian::date d = get_formatted_date(iso_date_time(tz));
 
   while (d.day_of_week() != boost::date_time::Tuesday) {
     d += boost::gregorian::days(1);
   }
 
   return to_iso_extended_string(d) + "T08:00";
+}
+
+// Get the current iso date and time.
+std::string iso_date_time(const boost::local_time::time_zone_ptr& time_zone) {
+  std::string iso_date_time;
+  if (!time_zone) {
+    return iso_date_time;
+  }
+
+  try {
+    boost::posix_time::ptime pt = boost::posix_time::second_clock::universal_time();
+    boost::local_time::local_date_time local_date_time(pt, time_zone);
+
+    pt = local_date_time.local_time();
+    boost::gregorian::date date = pt.date();
+
+    std::stringstream ss_time;
+    ss_time << pt.time_of_day();
+    std::string time = ss_time.str();
+
+    std::size_t found = time.find_last_of(':'); // remove seconds.
+    if (found != std::string::npos) {
+      time = time.substr(0, found);
+    }
+
+    iso_date_time = to_iso_extended_string(date) + "T" + time;
+  } catch (std::exception& e) {}
+  return iso_date_time;
 }
 
 // get a formatted date.

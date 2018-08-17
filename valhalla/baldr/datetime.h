@@ -39,13 +39,6 @@ protected:
 const tz_db_t& get_tz_db();
 
 /**
- * Get the iso date and time from the current date and time.
- * @param   time_zone        Timezone.
- * @return  Returns the formated date 2015-05-06.
- */
-std::string iso_date_time(const boost::local_time::time_zone_ptr& time_zone);
-
-/**
  * Get the seconds from epoch for a date_time string
  * @param   date_time   date_time.
  * @param   time_zone   Timezone.
@@ -87,17 +80,6 @@ void seconds_to_date(const bool is_depart_at,
                      std::string& iso_dest);
 
 /**
- * Add x seconds to a date_time and return a ISO date_time string.
- * @param   date_time   in the format of 01:34:15 or 2015-05-06T08:00
- * @param   seconds     seconds to add to the date.
- * @param   tz          timezone
- * @return  Returns ISO formatted string
- */
-std::string get_duration(const std::string& date_time,
-                         const uint32_t seconds,
-                         const boost::local_time::time_zone_ptr& tz);
-
-/**
  * Checks if a date is restricted within a begin and end range.
  * @param   type          type of restriction kYMD or kNthDow
  * @param   begin_hrs     begin hours
@@ -133,8 +115,19 @@ bool is_restricted(const bool type,
                    const boost::local_time::time_zone_ptr& time_zone);
 
 /**
+ * Convert std::tm into ISO date time string ((YYYY-MM-DDThh:mm)
+ * @param  tm  std::tm time structure
+ * @return Returns ISO date time string.
+ */
+static std::string tm_to_iso(const std::tm& t) {
+  char iso[18];
+  std::strftime(iso, sizeof(iso), "%Y-%m-%dT%H:%M", &t);
+  return std::string(iso);
+}
+
+/**
  * Convert ISO 8601 time into std::tm.
- * @param iso  ISO time string (YYYY-mm-ddTmi:sec")
+ * @param iso  ISO time string (YYYY-MM-DDThh:mm)
  * @return Returns std::tm time structure. If the input string is not valid this method
  *         sets tm_year to 0.
  */
@@ -170,6 +163,22 @@ static bool is_iso_valid(const std::string& date_time) {
 }
 
 /**
+ * Get the current time and return date, time in ISO format.
+ * @param   time_zone        Timezone.
+ * @return  Returns the formated date YYYY-MM-DDThh:mm.
+ */
+static std::string get_local_datetime(const boost::local_time::time_zone_ptr& time_zone) {
+  // Get the current time
+  std::time_t t = std::time(nullptr);
+  auto tm = std::gmtime(&t);
+
+  // TODO timezone logic
+
+  // Convert to ISO date time string
+  return tm_to_iso(*tm);
+}
+
+/**
  * Get the day of the week given a time string
  * @param dt Date time string.
  */
@@ -186,8 +195,7 @@ static uint32_t day_of_week(const std::string& dt) {
  * Get the number of seconds elapsed from midnight. Hours can be greater than 24
  * to allow support for transit schedules. See GTFS spec:
  * https://developers.google.com/transit/gtfs/reference#stop_times_fields
- * @param   date_time in the format HH:MM:SS or HH:MM or YYYY-MM-DDTHH:MM
- *          (examples: 01:34:15 or 2015-05-06T08:00)
+ * @param   date_time in format 2015-05-06T08:00
  * @return  Returns the seconds from midnight.
  */
 static uint32_t seconds_from_midnight(const std::string& date_time) {
@@ -229,7 +237,8 @@ static int32_t normalize_seconds_of_week(const int32_t secs) {
 /**
  * Get the number of days elapsed from the pivot date until the input date.
  * @param   date_time date time string (2015-05-06T08:00)
- * @return  Returns the number of days.
+ * @return  Returns the number of days. Returns 0 if the date is prior to
+ *          the pivot date.
  */
 static uint32_t days_from_pivot_date(const std::string& date_time) {
   // Seconds since epoch for the specified date time
@@ -240,7 +249,7 @@ static uint32_t days_from_pivot_date(const std::string& date_time) {
   std::string kPivotDateStr("2014-01-01T00:00");
   std::tm pivot_tm = iso_to_tm(kPivotDateStr);
   auto pivot = std::mktime(&pivot_tm);
-  return (sec - pivot) / midgard::kSecondsPerDay;
+  return (sec > pivot) ? (sec - pivot) / midgard::kSecondsPerDay : 0;
 }
 
 /**
@@ -268,6 +277,17 @@ static uint32_t day_of_week_mask(const std::string& date_time) {
       return kDOWNone;
   }
 }
+
+/**
+ * Add x seconds to a date_time and return a ISO date_time string.
+ * @param   date_time   in format YYYY-MM-DDThh:mm
+ * @param   seconds     seconds to add to the date.
+ * @param   tz          timezone
+ * @return  Returns ISO formatted string
+ */
+std::string get_duration(const std::string& date_time,
+                         const uint32_t seconds,
+                         const boost::local_time::time_zone_ptr& tz);
 
 } // namespace DateTime
 } // namespace baldr

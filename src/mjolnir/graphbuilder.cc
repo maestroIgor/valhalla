@@ -30,6 +30,7 @@
 
 #include "mjolnir/edgeinfobuilder.h"
 #include "mjolnir/graphtilebuilder.h"
+#include "mjolnir/servicedays.h"
 
 using namespace valhalla::midgard;
 using namespace valhalla::baldr;
@@ -1025,8 +1026,7 @@ void BuildLocalTiles(const unsigned int thread_count,
                      const boost::property_tree::ptree& pt) {
 
   auto tz = DateTime::get_tz_db().from_index(DateTime::get_tz_db().to_index("America/New_York"));
-  uint32_t tile_creation_date = DateTime::days_from_pivot_date(DateTime::iso_date_time(tz));
-
+  uint32_t tile_creation_date = days_from_pivot_date(get_formatted_date(iso_date_time(tz)));
   LOG_INFO("Building " + std::to_string(tiles.size()) + " tiles with " +
            std::to_string(thread_count) + " threads...");
 

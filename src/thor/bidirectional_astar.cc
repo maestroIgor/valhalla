@@ -598,7 +598,7 @@ void BidirectionalAStar::SetOrigin(GraphReader& graphreader, odin::Location& ori
   // Set the origin timezone
   if (closest_ni != nullptr && origin.has_date_time() && origin.date_time() == "current") {
     origin.set_date_time(
-        DateTime::iso_date_time(DateTime::get_tz_db().from_index(closest_ni->timezone())));
+        DateTime::get_local_datetime(DateTime::get_tz_db().from_index(closest_ni->timezone())));
   }
 }
 

@@ -33,6 +33,13 @@ namespace mjolnir {
 std::string get_testing_date_time();
 
 /**
+ * Get the iso date and time from the current date and time.
+ * @param   time_zone        Timezone.
+ * @return  Returns the formated date 2015-05-06.
+ */
+std::string iso_date_time(const boost::local_time::time_zone_ptr& time_zone);
+
+/**
  * Get a formatted date from a string.
  * @param date in the format of 20150516 or 2015-05-06T08:00
  * @return  Returns the formatted date.
