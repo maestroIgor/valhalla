@@ -308,7 +308,8 @@ public:
                                                cr->begin_week(), cr->begin_month(),
                                                cr->begin_day_dow(), cr->end_week(), cr->end_month(),
                                                cr->end_day_dow(), current_time,
-                                               baldr::DateTime::get_tz_db().from_index(tz_index))) {
+                                               baldr::DateTime::GetTimezoneDB().from_index(
+                                                   tz_index))) {
               return true;
             }
             continue;
@@ -336,7 +337,7 @@ public:
                                           td.end_mins(), td.dow(), td.begin_week(), td.begin_month(),
                                           td.begin_day_dow(), td.end_week(), td.end_month(),
                                           td.end_day_dow(), current_time,
-                                          baldr::DateTime::get_tz_db().from_index(tz_index));
+                                          baldr::DateTime::GetTimezoneDB().from_index(tz_index));
   }
 
   /**

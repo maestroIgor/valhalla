@@ -1675,7 +1675,7 @@ void AddToGraph(GraphTileBuilder& tilebuilder_transit,
       const std::string& tz = station.has_timezone() ? station.timezone() : "";
       uint32_t timezone = 0;
       if (!tz.empty()) {
-        timezone = DateTime::get_tz_db().to_index(tz);
+        timezone = get_tz_db().to_index(tz);
       }
 
       if (timezone == 0) {
@@ -1721,7 +1721,7 @@ void AddToGraph(GraphTileBuilder& tilebuilder_transit,
         const std::string& tz = egress.has_timezone() ? egress.timezone() : "";
         uint32_t timezone = 0;
         if (!tz.empty()) {
-          timezone = DateTime::get_tz_db().to_index(tz);
+          timezone = get_tz_db().to_index(tz);
         }
 
         if (timezone == 0) {
@@ -1899,7 +1899,7 @@ void AddToGraph(GraphTileBuilder& tilebuilder_transit,
     const std::string& tz = platform.has_timezone() ? platform.timezone() : "";
     uint32_t timezone = 0;
     if (!tz.empty()) {
-      timezone = DateTime::get_tz_db().to_index(tz);
+      timezone = get_tz_db().to_index(tz);
     }
 
     if (timezone == 0) {
@@ -2115,7 +2115,7 @@ void build_tiles(const boost::property_tree::ptree& pt,
     const GraphTile* transit_tile = reader_transit_level.GetGraphTile(transit_tile_id);
     GraphTileBuilder tilebuilder_transit(reader_transit_level.tile_dir(), transit_tile_id, false);
 
-    auto tz = DateTime::get_tz_db().from_index(DateTime::get_tz_db().to_index("America/New_York"));
+    auto tz = get_tz_db().from_index(get_tz_db().to_index("America/New_York"));
     uint32_t tile_creation_date = days_from_pivot_date(get_formatted_date(iso_date_time(tz)));
     tilebuilder_transit.AddTileCreationDate(tile_creation_date);
 

@@ -705,13 +705,13 @@ TripPathBuilder::Build(const AttributesController& controller,
     if (dest.has_date_time()) { // arrive by
 
       uint64_t sec = DateTime::seconds_since_epoch(dest.date_time(),
-                                                   DateTime::get_tz_db().from_index(
+                                                   DateTime::GetTimezoneDB().from_index(
                                                        last_tile->node(startnode)->timezone()));
 
       std::string origin_date, dest_date;
       DateTime::seconds_to_date(false, sec - elapsedtime, sec,
-                                DateTime::get_tz_db().from_index(first_node->timezone()),
-                                DateTime::get_tz_db().from_index(
+                                DateTime::GetTimezoneDB().from_index(first_node->timezone()),
+                                DateTime::GetTimezoneDB().from_index(
                                     last_tile->node(startnode)->timezone()),
                                 origin_date, dest_date);
 
@@ -722,12 +722,12 @@ TripPathBuilder::Build(const AttributesController& controller,
     } else if (origin.has_date_time()) { // leave at
       uint64_t sec =
           DateTime::seconds_since_epoch(origin.date_time(),
-                                        DateTime::get_tz_db().from_index(first_node->timezone()));
+                                        DateTime::GetTimezoneDB().from_index(first_node->timezone()));
 
       std::string origin_date, dest_date;
       DateTime::seconds_to_date(true, sec, sec + elapsedtime,
-                                DateTime::get_tz_db().from_index(first_node->timezone()),
-                                DateTime::get_tz_db().from_index(
+                                DateTime::GetTimezoneDB().from_index(first_node->timezone()),
+                                DateTime::GetTimezoneDB().from_index(
                                     last_tile->node(startnode)->timezone()),
                                 origin_date, dest_date);
 
@@ -819,10 +819,8 @@ TripPathBuilder::Build(const AttributesController& controller,
     }
 
     if (controller.attributes.at(kNodeTimeZone)) {
-      auto tz = DateTime::get_tz_db().from_index(node->timezone());
-      if (tz) {
-        trip_node->set_time_zone(tz->to_posix_string());
-      }
+      auto tz = DateTime::GetTimezoneDB().from_index(node->timezone());
+      trip_node->set_time_zone(tz.id_);
     }
 
     AddTransitNodes(trip_node, node, startnode, start_tile, graphtile, controller);
@@ -952,12 +950,7 @@ TripPathBuilder::Build(const AttributesController& controller,
           std::string dt =
               DateTime::get_duration(origin.date_time(),
                                      (transit_departure->departure_time() - origin_sec_from_mid),
-                                     DateTime::get_tz_db().from_index(node->timezone()));
-
-          std::size_t found = dt.find_last_of(' '); // remove tz abbrev.
-          if (found != std::string::npos) {
-            dt = dt.substr(0, found);
-          }
+                                     DateTime::GetTimezoneDB().from_index(node->timezone()));
 
           // Set departure time from this transit stop if requested
           if (controller.attributes.at(kNodeTransitPlatformInfoDepartureDateTime)) {
@@ -967,16 +960,12 @@ TripPathBuilder::Build(const AttributesController& controller,
           // TODO:  set removed tz abbrev on transit_platform_info for departure.
 
           // Copy the arrival time for use at the next transit stop
-          arrival_time = DateTime::get_duration(origin.date_time(),
-                                                (transit_departure->departure_time() +
-                                                 transit_departure->elapsed_time()) -
-                                                    origin_sec_from_mid,
-                                                DateTime::get_tz_db().from_index(node->timezone()));
-
-          found = arrival_time.find_last_of(' '); // remove tz abbrev.
-          if (found != std::string::npos) {
-            arrival_time = arrival_time.substr(0, found);
-          }
+          arrival_time =
+              DateTime::get_duration(origin.date_time(),
+                                     (transit_departure->departure_time() +
+                                      transit_departure->elapsed_time()) -
+                                         origin_sec_from_mid,
+                                     DateTime::GetTimezoneDB().from_index(node->timezone()));
 
           // TODO:  set removed tz abbrev on transit_platform_info for arrival.
 
@@ -1189,13 +1178,13 @@ TripPathBuilder::Build(const AttributesController& controller,
   if (dest.has_date_time()) { // arrive by
 
     uint64_t sec =
-        DateTime::seconds_since_epoch(dest.date_time(), DateTime::get_tz_db().from_index(
+        DateTime::seconds_since_epoch(dest.date_time(), DateTime::GetTimezoneDB().from_index(
                                                             last_tile->node(startnode)->timezone()));
 
     std::string origin_date, dest_date;
     DateTime::seconds_to_date(false, sec - elapsedtime, sec,
-                              DateTime::get_tz_db().from_index(first_node->timezone()),
-                              DateTime::get_tz_db().from_index(
+                              DateTime::GetTimezoneDB().from_index(first_node->timezone()),
+                              DateTime::GetTimezoneDB().from_index(
                                   last_tile->node(startnode)->timezone()),
                               origin_date, dest_date);
 
@@ -1206,12 +1195,12 @@ TripPathBuilder::Build(const AttributesController& controller,
   } else if (origin.has_date_time()) { // leave at
     uint64_t sec =
         DateTime::seconds_since_epoch(origin.date_time(),
-                                      DateTime::get_tz_db().from_index(first_node->timezone()));
+                                      DateTime::GetTimezoneDB().from_index(first_node->timezone()));
 
     std::string origin_date, dest_date;
     DateTime::seconds_to_date(true, sec, sec + elapsedtime,
-                              DateTime::get_tz_db().from_index(first_node->timezone()),
-                              DateTime::get_tz_db().from_index(
+                              DateTime::GetTimezoneDB().from_index(first_node->timezone()),
+                              DateTime::GetTimezoneDB().from_index(
                                   last_tile->node(startnode)->timezone()),
                               origin_date, dest_date);
 

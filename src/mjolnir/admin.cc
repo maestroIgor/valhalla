@@ -96,7 +96,7 @@ std::unordered_map<uint32_t, multi_polygon_type> GetTimeZones(sqlite3* db_handle
         geom = (char*)sqlite3_column_text(stmt, 1);
       }
 
-      uint32_t idx = DateTime::get_tz_db().to_index(tz_id);
+      uint32_t idx = DateTime::GetTimezoneDB().to_index(tz_id);
       if (idx == 0) {
         result = sqlite3_step(stmt);
         continue;

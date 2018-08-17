@@ -89,7 +89,7 @@ std::string test_iso_date_time(const uint8_t dow_mask,
 
 void TryIsoDateTime() {
 
-  auto tz = DateTime::get_tz_db().from_index(DateTime::get_tz_db().to_index("America/New_York"));
+  auto tz = get_tz_db().from_index(get_tz_db().to_index("America/New_York"));
 
   std::string current_date_time = iso_date_time(tz);
   std::string time;
@@ -102,7 +102,7 @@ void TryIsoDateTime() {
     throw std::runtime_error(std::string("Iso date time failed ") + current_date_time);
   }
 
-  tz = DateTime::get_tz_db().from_index(DateTime::get_tz_db().to_index("America/Chicago"));
+  tz = get_tz_db().from_index(get_tz_db().to_index("America/Chicago"));
   current_date_time = iso_date_time(tz);
   found = current_date_time.find("T"); // YYYY-MM-DDTHH:MM
   if (found != std::string::npos)
@@ -113,7 +113,7 @@ void TryIsoDateTime() {
     throw std::runtime_error(std::string("Iso date time failed ") + current_date_time);
   }
 
-  tz = DateTime::get_tz_db().from_index(DateTime::get_tz_db().to_index("Africa/Porto-Novo"));
+  tz = get_tz_db().from_index(get_tz_db().to_index("Africa/Porto-Novo"));
   current_date_time = iso_date_time(tz);
   found = current_date_time.find("T"); // YYYY-MM-DDTHH:MM
   if (found != std::string::npos)
@@ -197,7 +197,7 @@ void TryGetServiceDays(bool check_b_date,
   std::string bdate = begin_date;
   auto b = get_formatted_date(begin_date);
   auto e = get_formatted_date(end_date);
-  auto tz = DateTime::get_tz_db().from_index(DateTime::get_tz_db().to_index("America/New_York"));
+  auto tz = get_tz_db().from_index(get_tz_db().to_index("America/New_York"));
   auto tile_date = days_from_pivot_date(get_formatted_date(iso_date_time(tz)));
 
   uint64_t days = get_service_days(b, e, tile_date, dow_mask);
@@ -220,7 +220,7 @@ void TryRejectFeed(const std::string& begin_date,
 
   auto b = get_formatted_date(begin_date);
   auto e = get_formatted_date(end_date);
-  auto tz = DateTime::get_tz_db().from_index(DateTime::get_tz_db().to_index("America/New_York"));
+  auto tz = get_tz_db().from_index(get_tz_db().to_index("America/New_York"));
 
   auto tile_date = days_from_pivot_date(get_formatted_date(iso_date_time(tz)));
 
@@ -328,7 +328,7 @@ void TestServiceDays() {
 
   // Test using a date far in the past.  Feed will be rejected.
   TryRejectFeed("2014-09-25", "2014-09-28", dow_mask, 0);
-  auto tz = DateTime::get_tz_db().from_index(DateTime::get_tz_db().to_index("America/New_York"));
+  auto tz = get_tz_db().from_index(get_tz_db().to_index("America/New_York"));
 
   boost::gregorian::date today = get_formatted_date(iso_date_time(tz));
 

@@ -70,8 +70,8 @@ void TimeDepForward::ExpandForward(GraphReader& graphreader,
   if (nodeinfo->timezone() != origin_tz_index_) {
     // Get the difference in seconds between the origin tz and current tz
     int tz_diff =
-        DateTime::timezone_diff(true, localtime, DateTime::get_tz_db().from_index(origin_tz_index_),
-                                DateTime::get_tz_db().from_index(nodeinfo->timezone()));
+        DateTime::timezone_diff(localtime, DateTime::GetTimezoneDB().from_index(origin_tz_index_),
+                                DateTime::GetTimezoneDB().from_index(nodeinfo->timezone()));
     localtime += tz_diff;
     seconds_of_week = DateTime::normalize_seconds_of_week(seconds_of_week + tz_diff);
   }
@@ -220,7 +220,7 @@ std::vector<PathInfo> TimeDepForward::GetBestPath(odin::Location& origin,
   // Set route start time (seconds from epoch)
   uint64_t start_time =
       DateTime::seconds_since_epoch(origin.date_time(),
-                                    DateTime::get_tz_db().from_index(origin_tz_index_));
+                                    DateTime::GetTimezoneDB().from_index(origin_tz_index_));
 
   // Set seconds from beginning of the week
   seconds_of_week_ = DateTime::day_of_week(origin.date_time()) * kSecondsPerDay +

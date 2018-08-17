@@ -1,65 +1,115 @@
 #ifndef VALHALLA_BALDR_DATETIME_H_
 #define VALHALLA_BALDR_DATETIME_H_
 
+#include <algorithm>
 #include <cstdint>
 #include <ctime>
 #include <iomanip>
 #include <iostream>
 #include <locale>
-#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
 
-#include <boost/date_time/gregorian/gregorian.hpp>
-#include <boost/date_time/local_time/local_time.hpp>
-#include <boost/date_time/local_time/local_time_io.hpp>
-#include <boost/date_time/local_time/tz_database.hpp>
-
 #include <valhalla/baldr/graphconstants.h>
 #include <valhalla/midgard/constants.h>
+#include <valhalla/midgard/logging.h>
 
 namespace valhalla {
 namespace baldr {
 namespace DateTime {
 
-struct tz_db_t : public boost::local_time::tz_database {
-  tz_db_t();
-  size_t to_index(const std::string& region) const;
-  boost::shared_ptr<time_zone_base_type> from_index(size_t index) const;
+/**
+ * Get the raw timezone spec (CSV).
+ * @return  Returns a string containing the timezone information.
+ */
+std::string get_timezone_csv();
+
+// Structure holding timezone info
+struct TimezoneInfo {
+  std::string id_;
+  std::string abbrev_;
+  std::string name_;
+  std::string dst_abbrev_;
+  std::string dst_name_;
+  std::string gmt_offset_;
+  std::string dst_adjust_;
+  std::string start_date_;
+  std::string start_time_;
+  std::string end_date_;
+  std::string end_time_;
+  int gmt_offset_secs_;
+
+  /**
+   * Checks if this timezone has a DST entry.
+   * @return Returns true if this timezone has DST.
+   */
+  bool has_dst() const {
+    return !dst_adjust_.empty();
+  }
+
+  /**
+   * Equality operator.
+   */
+  bool operator==(const TimezoneInfo& other) const {
+    return id_ == other.id_;
+  }
+  /**
+   * Simple operator < for finding by id (string compares).
+   */
+  bool operator<(const TimezoneInfo& other) const {
+    return id_ < other.id_;
+  }
+};
+
+struct TimezoneDB {
+  TimezoneDB();
+
+  /**
+   * Convert a timezone name into an index. Add 1 to the index so that
+   * index 0 represents an invalid or missing timezone.
+   * @param id  Timezone Id.
+   * @return Returns the index (+1) in the timezone info list.
+   */
+  size_t to_index(const std::string& id) const {
+    TimezoneInfo comp;
+    comp.id_ = id;
+    auto it = std::find(timezones_.cbegin(), timezones_.cend(), comp);
+    if (it == timezones_.end()) {
+      LOG_ERROR("Could not find TimezoneInfo for " + id);
+      return 0;
+    }
+    return (it - timezones_.begin()) + 1;
+  }
+
+  /**
+   * Return timezone info given an index.
+   */
+  const TimezoneInfo& from_index(const size_t index) const {
+    // Validate index
+    if (index < 1 || index > timezones_.size()) {
+      LOG_ERROR("Timezone index " + std::to_string(index) + " is out of range");
+      return timezones_[0];
+    }
+    return timezones_[index - 1];
+  }
 
 protected:
-  std::vector<std::string> regions;
+  std::vector<TimezoneInfo> timezones_;
 };
 
 /**
  * Get the timezone database singleton
  * @return  timezone database
  */
-const tz_db_t& get_tz_db();
+const TimezoneDB& GetTimezoneDB();
 
 /**
- * Get the seconds from epoch for a date_time string
- * @param   date_time   date_time.
- * @param   time_zone   Timezone.
- * @return  Returns the seconds from epoch.
+ * Convenience method to convert HH:MM::SS string into seconds.
+ * @param str  Time string with form HH:MM::SS
+ * @return Returns the number of seconds.
  */
-uint64_t seconds_since_epoch(const std::string& date_time,
-                             const boost::local_time::time_zone_ptr& time_zone);
-
-/**
- * Get the difference between two timezones using the current time (seconds from epoch
- * so that DST can be take into account).
- * @param   is_depart_at  is this a depart at or arrive by
- * @param   seconds       seconds since epoch
- * @param   origin_tz     timezone for origin
- * @param   dest_tz       timezone for dest
- * @return Returns the seconds difference between the 2 timezones.
- */
-int timezone_diff(const bool is_depart_at,
-                  const uint64_t seconds,
-                  const boost::local_time::time_zone_ptr& origin_tz,
-                  const boost::local_time::time_zone_ptr& dest_tz);
+int32_t timestring_to_seconds(const std::string& str);
 
 /**
  * Get the iso date time from seconds since epoch and timezone.
@@ -74,8 +124,8 @@ int timezone_diff(const bool is_depart_at,
 void seconds_to_date(const bool is_depart_at,
                      const uint64_t origin_seconds,
                      const uint64_t dest_seconds,
-                     const boost::local_time::time_zone_ptr& origin_tz,
-                     const boost::local_time::time_zone_ptr& dest_tz,
+                     const TimezoneInfo& origin_tz,
+                     const TimezoneInfo& dest_tz,
                      std::string& iso_origin,
                      std::string& iso_dest);
 
@@ -112,7 +162,7 @@ bool is_restricted(const bool type,
                    const uint8_t end_month,
                    const uint8_t end_day_dow,
                    const uint64_t current_time,
-                   const boost::local_time::time_zone_ptr& time_zone);
+                   const TimezoneInfo& time_zone);
 
 /**
  * Convert std::tm into ISO date time string ((YYYY-MM-DDThh:mm)
@@ -167,7 +217,7 @@ static bool is_iso_valid(const std::string& date_time) {
  * @param   time_zone        Timezone.
  * @return  Returns the formated date YYYY-MM-DDThh:mm.
  */
-static std::string get_local_datetime(const boost::local_time::time_zone_ptr& time_zone) {
+static std::string get_local_datetime(const TimezoneInfo& time_zone) {
   // Get the current time
   std::time_t t = std::time(nullptr);
   auto tm = std::gmtime(&t);
@@ -207,16 +257,7 @@ static uint32_t seconds_from_midnight(const std::string& date_time) {
     str = date_time;
   }
 
-  // Split the string by the delimiter ':'
-  int secs = 0;
-  int multiplier = static_cast<int>(midgard::kSecondsPerHour);
-  std::string item;
-  std::stringstream ss(str);
-  while (std::getline(ss, item, ':')) {
-    secs += std::stoi(item) * multiplier;
-    multiplier = (multiplier == midgard::kSecondsPerHour) ? midgard::kSecondsPerMinute : 1;
-  }
-  return secs;
+  return timestring_to_seconds(str);
 }
 
 /**
@@ -278,16 +319,67 @@ static uint32_t day_of_week_mask(const std::string& date_time) {
   }
 }
 
+// TODO - seems like a better name is needed here? Really adds some time to
+// a date_time string and formats the resulting time string (with a timezone offset)
+
 /**
- * Add x seconds to a date_time and return a ISO date_time string.
- * @param   date_time   in format YYYY-MM-DDThh:mm
- * @param   seconds     seconds to add to the date.
- * @param   tz          timezone
- * @return  Returns ISO formatted string
+ * Add seconds to a date_time and return a ISO date_time string with timezone
+ * offset appended.
+ * @param   date_time in format YYYY-MM-DDThh:mm
+ * @param   seconds   seconds to add to the date.
+ * @param   tz        timezone information
+ * @return  Returns ISO formatted string with timezone offset.
  */
-std::string get_duration(const std::string& date_time,
-                         const uint32_t seconds,
-                         const boost::local_time::time_zone_ptr& tz);
+static std::string
+get_duration(const std::string& date_time, const uint32_t seconds, const TimezoneInfo& tz) {
+  // Convert local date_time string to seconds from epoch
+  auto t1 = iso_to_tm(date_time);
+  auto n = std::mktime(&t1);
+
+  // Add seconds elapsed time and GMT offset for the timezone.
+  auto new_time = n + tz.gmt_offset_secs_ + seconds;
+
+  // Form new ISO string
+  auto t2 = std::gmtime(&new_time);
+  return tm_to_iso(*t2) + tz.gmt_offset_;
+}
+
+/**
+ * Get the difference between two timezones using the current time (seconds from epoch
+ * so that DST can be take into account).
+ * @param   seconds  seconds since epoch
+ * @param   tz1      timezone at start
+ * @param   tz2      timezone at end
+ * @return Returns the seconds difference between the 2 timezones.
+ */
+static int timezone_diff(const uint64_t seconds, const TimezoneInfo& tz1, const TimezoneInfo& tz2) {
+  // Get the GMT offset at timezone 1
+  int gmt_offset1 = tz1.gmt_offset_secs_;
+
+  // Get the GMT offset at timezone 2
+  int gmt_offset2 = tz2.gmt_offset_secs_;
+
+  // TODO - resolve any DST differences (determine if the timezones have
+  // DST in effect based on the seconds since epoch).
+
+  // Returns the difference
+  return gmt_offset2 - gmt_offset1;
+}
+
+/**
+ * Get the seconds from epoch for a date_time string
+ * @param   date_time   date_time.
+ * @param   time_zone   Timezone.
+ * @return  Returns the seconds from epoch.
+ */
+static uint64_t seconds_since_epoch(const std::string& date_time, const TimezoneInfo& time_zone) {
+  auto t1 = iso_to_tm(date_time);
+  auto n = std::mktime(&t1);
+
+  // Adjust based on timezone?
+  // What timezone is the original date_time string in?
+  return n;
+}
 
 } // namespace DateTime
 } // namespace baldr

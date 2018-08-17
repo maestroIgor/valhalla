@@ -1025,7 +1025,7 @@ void BuildLocalTiles(const unsigned int thread_count,
                      const std::unique_ptr<const valhalla::skadi::sample>& sample,
                      const boost::property_tree::ptree& pt) {
 
-  auto tz = DateTime::get_tz_db().from_index(DateTime::get_tz_db().to_index("America/New_York"));
+  auto tz = get_tz_db().from_index(get_tz_db().to_index("America/New_York"));
   uint32_t tile_creation_date = days_from_pivot_date(get_formatted_date(iso_date_time(tz)));
   LOG_INFO("Building " + std::to_string(tiles.size()) + " tiles with " +
            std::to_string(thread_count) + " threads...");

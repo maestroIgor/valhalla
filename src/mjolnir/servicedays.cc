@@ -10,9 +10,40 @@ using namespace valhalla::mjolnir;
 namespace valhalla {
 namespace mjolnir {
 
+tz_db_t::tz_db_t() {
+  // load up the tz data
+  std::string tz_data = DateTime::get_timezone_csv();
+  std::stringstream ss(tz_data);
+  load_from_stream(ss);
+  // unfortunately boosts object has its map marked as private... so we have to keep our own
+  regions = region_list();
+}
+
+size_t tz_db_t::to_index(const std::string& region) const {
+  auto it = std::find(regions.cbegin(), regions.cend(), region);
+  if (it == regions.cend()) {
+    return 0;
+  }
+  return (it - regions.cbegin()) + 1;
+}
+
+boost::shared_ptr<boost::local_time::tz_database::time_zone_base_type>
+tz_db_t::from_index(size_t index) const {
+  if (index < 1 || index > regions.size()) {
+    return {};
+  };
+  return time_zone_from_region(regions[index - 1]);
+}
+
+const tz_db_t& get_tz_db() {
+  // thread safe static initialization of global singleton
+  static const tz_db_t tz_db;
+  return tz_db;
+}
+
 // Get a formatted testing date.  Currently, next Tuesday @ 08:00.
 std::string get_testing_date_time() {
-  auto tz = DateTime::get_tz_db().from_index(DateTime::get_tz_db().to_index("America/New_York"));
+  auto tz = get_tz_db().from_index(get_tz_db().to_index("America/New_York"));
   boost::gregorian::date d = get_formatted_date(iso_date_time(tz));
 
   while (d.day_of_week() != boost::date_time::Tuesday) {

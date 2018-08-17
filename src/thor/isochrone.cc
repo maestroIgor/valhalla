@@ -941,7 +941,7 @@ void Isochrone::SetOriginLocations(
     // Set the origin timezone
     if (nodeinfo != nullptr && origin.has_date_time() && origin.date_time() == "current") {
       origin.set_date_time(
-          DateTime::get_local_datetime(DateTime::get_tz_db().from_index(nodeinfo->timezone())));
+          DateTime::get_local_datetime(DateTime::GetTimezoneDB().from_index(nodeinfo->timezone())));
     }
   }
 }
@@ -1015,7 +1015,7 @@ void Isochrone::SetOriginLocationsMM(
     // Set the origin timezone
     if (nodeinfo != nullptr && origin.has_date_time() && origin.date_time() == "current") {
       origin.set_date_time(
-          DateTime::get_local_datetime(DateTime::get_tz_db().from_index(nodeinfo->timezone())));
+          DateTime::get_local_datetime(DateTime::GetTimezoneDB().from_index(nodeinfo->timezone())));
     }
   }
 }
