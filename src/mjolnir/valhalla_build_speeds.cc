@@ -31,9 +31,6 @@ using namespace valhalla::midgard;
 boost::filesystem::path config_file_path;
 std::vector<std::string> input_files;
 
-const uint32_t kMinutesPerHour = 60;
-const uint32_t kMinutesPerDay = 24 * kMinutesPerHour;
-
 /**
  * Structure to define speed along a way
  */

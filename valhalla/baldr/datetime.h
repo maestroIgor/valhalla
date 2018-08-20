@@ -175,6 +175,13 @@ static std::string tm_to_iso(const std::tm& t) {
   return std::string(iso);
 }
 
+static std::tm epoch_to_tm(const uint64_t current_time, const TimezoneInfo& tz) {
+  // TODO - is TM adjustment needed?
+  std::time_t t = static_cast<time_t>(current_time);
+  auto tm = std::localtime(&t);
+  return *tm;
+}
+
 /**
  * Convert ISO 8601 time into std::tm.
  * @param iso  ISO time string (YYYY-MM-DDThh:mm)

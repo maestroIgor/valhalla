@@ -333,188 +333,160 @@ bool is_restricted(const bool type,
                    const uint8_t end_day_dow,
                    const uint64_t current_time,
                    const TimezoneInfo& time_zone) {
-  return false;
-  /**
-    bool dow_in_range = true;
-    bool dt_in_range = false;
+  // Get std::tm for current_time
+  std::tm t = epoch_to_tm(current_time, time_zone);
 
-    try {
-      boost::gregorian::date begin_date, end_date;
-      boost::posix_time::time_duration b_td = boost::posix_time::hours(0),
-                                       e_td = boost::posix_time::hours(23) +
-                                              boost::posix_time::minutes(59);
+  // Call mktime to fill in day of week
+  std::mktime(&t);
 
-      const boost::posix_time::ptime time_epoch(boost::gregorian::date(1970, 1, 1));
-      boost::posix_time::ptime origin_pt = time_epoch + boost::posix_time::seconds(current_time);
-      boost::local_time::local_date_time in_local_time(origin_pt, time_zone);
-      boost::gregorian::date d = in_local_time.date();
-      boost::posix_time::time_duration td = in_local_time.local_time().time_of_day();
+  // If day of week is provided, check if current time matches the DOW
+  bool dow_in_range = true;
+  if (dow) {
+    dow_in_range = (dow & (1 << t.tm_wday));
+  }
 
-      // we have dow
-      if (dow) {
+  // Set the begin and end time of day (in minutes)
+  bool dt_in_range = false;
+  uint32_t b_td = 0;
+  uint32_t e_td = midgard::kMinutesPerDay;
+  uint32_t td = t.tm_hour * midgard::kMinutesPerHour + t.tm_min;
 
-        uint8_t local_dow = 0;
-        switch (d.day_of_week()) {
-          case boost::date_time::Sunday:
-            local_dow = kSunday;
-            break;
-          case boost::date_time::Monday:
-            local_dow = kMonday;
-            break;
-          case boost::date_time::Tuesday:
-            local_dow = kTuesday;
-            break;
-          case boost::date_time::Wednesday:
-            local_dow = kWednesday;
-            break;
-          case boost::date_time::Thursday:
-            local_dow = kThursday;
-            break;
-          case boost::date_time::Friday:
-            local_dow = kFriday;
-            break;
-          case boost::date_time::Saturday:
-            local_dow = kSaturday;
-            break;
-          default:
-            return false; // should never happen
-            break;
-        }
-        dow_in_range = (dow & local_dow);
-      }
-
-      uint8_t b_month = begin_month;
-      uint8_t e_month = end_month;
-      uint8_t b_day_dow = begin_day_dow;
-      uint8_t e_day_dow = end_day_dow;
-      uint8_t b_week = begin_week;
-      uint8_t e_week = end_week;
-
-      if (type == kNthDow && begin_week && !begin_day_dow && !begin_month) { // Su[-1]
-        b_month = d.month().as_enum();
-      }
-      if (type == kNthDow && end_week && !end_day_dow && !end_month) { // Su[-1]
-        e_month = d.month().as_enum();
-      }
-
-      if (type == kNthDow && begin_week && !begin_day_dow && !begin_month && !end_week &&
-          !end_day_dow && !end_month) { // only Su[-1] set in begin.
-        // First Sunday of every month only.
-        e_month = b_month;
-        b_day_dow = e_day_dow = dow;
-        e_week = b_week;
-      } else if (type == kYMD && (b_month && e_month) &&
-                 (!b_day_dow && !e_day_dow)) { // Sep-Jun We 08:15-08:45
-
-        b_day_dow = 1;
-        boost::gregorian::date e_d = boost::gregorian::date(d.year(), e_month, 1);
-        e_day_dow = e_d.end_of_month().day();
-      }
-
-      // month only
-      if (type == kYMD && (b_month && e_month) && (!b_day_dow && !e_day_dow && !b_week && !b_week) &&
-          b_month == e_month) {
-
-        dt_in_range = (b_month <= d.month().as_enum() && d.month().as_enum() <= e_month);
-
-        if (begin_hrs || begin_mins || end_hrs || end_mins) {
-          b_td = boost::posix_time::hours(begin_hrs) + boost::posix_time::minutes(begin_mins);
-          e_td = boost::posix_time::hours(end_hrs) + boost::posix_time::minutes(end_mins);
-        }
-
-        dt_in_range = (dt_in_range && (b_td <= td && td <= e_td));
-        return (dow_in_range && dt_in_range);
-
-      } else if (type == kYMD && b_month && b_day_dow) {
-
-        uint32_t e_year = d.year(), b_year = d.year();
-        if (b_month == e_month) {
-          if (b_day_dow > e_day_dow) { // Mar 15 - Mar 1
-            e_year = d.year() + 1;
-          }
-        } else if (b_month > e_month) { // Oct 10 - Mar 3
-          if (b_month > d.month().as_enum()) {
-            b_year = d.year() - 1;
-          } else {
-            e_year = d.year() + 1;
-          }
-        }
-
-        begin_date = boost::gregorian::date(b_year, b_month, b_day_dow);
-        end_date = boost::gregorian::date(e_year, e_month, e_day_dow);
-
-      } else if (type == kNthDow && b_month && b_day_dow && e_month &&
-                 e_day_dow) { // kNthDow types can have a mix of ymd and nthdow. (e.g. Dec Su[-1]-Mar
-                              // 3 Sat 15:00-17:00)
-
-        uint32_t e_year = d.year(), b_year = d.year();
-        if (b_month == e_month) {
-          if (b_day_dow > e_day_dow) { // Mar 15 - Mar 1
-            e_year = d.year() + 1;
-          }
-        } else if (b_month > e_month) { // Oct 10 - Mar 3
-          if (b_month > d.month().as_enum()) {
-            b_year = d.year() - 1;
-          } else {
-            e_year = d.year() + 1;
-          }
-        }
-
-        if (b_week && b_week <= 5) { // kNthDow
-          boost::gregorian::nth_day_of_the_week_in_month
-              nthdow(static_cast<boost::gregorian::nth_day_of_the_week_in_month::week_num>(b_week),
-                     b_day_dow - 1, b_month);
-          begin_date = nthdow.get_date(b_year);
-        } else { // YMD
-          begin_date = boost::gregorian::date(b_year, b_month, b_day_dow);
-        }
-
-        if (e_week && e_week <= 5) { // kNthDow
-          boost::gregorian::nth_day_of_the_week_in_month
-              nthdow(static_cast<boost::gregorian::nth_day_of_the_week_in_month::week_num>(e_week),
-                     e_day_dow - 1, e_month);
-          end_date = nthdow.get_date(e_year);
-        } else {                                                         // YMD
-          end_date = boost::gregorian::date(e_year, e_month, e_day_dow); // Dec 5 to Mar 3
-        }
-      } else { // do we have just time?
-
-        if (begin_hrs || begin_mins || end_hrs || end_mins) {
-          b_td = boost::posix_time::hours(begin_hrs) + boost::posix_time::minutes(begin_mins);
-          e_td = boost::posix_time::hours(end_hrs) + boost::posix_time::minutes(end_mins);
-
-          if (begin_hrs > end_hrs) { // 19:00 - 06:00
-            dt_in_range = !(e_td <= td && td <= b_td);
-          } else {
-            dt_in_range = (b_td <= td && td <= e_td);
-          }
-        }
-        return (dow_in_range && dt_in_range);
-      }
-
-      if (begin_hrs || begin_mins || end_hrs || end_mins) {
-        b_td = boost::posix_time::hours(begin_hrs) + boost::posix_time::minutes(begin_mins);
-        e_td = boost::posix_time::hours(end_hrs) + boost::posix_time::minutes(end_mins);
-      }
-
-      boost::local_time::local_date_time b_in_local_time = get_ldt(begin_date, b_td, time_zone);
-      boost::local_time::local_date_time e_in_local_time = get_ldt(end_date, e_td, time_zone);
-
-      dt_in_range = (b_in_local_time.date() <= in_local_time.date() &&
-                     in_local_time.date() <= e_in_local_time.date());
-
-      bool time_in_range = false;
-
-      if (begin_hrs > end_hrs) { // 19:00 - 06:00
-        time_in_range = !(e_td <= td && td <= b_td);
-      } else {
-        time_in_range = (b_td <= td && td <= e_td);
-      }
-
-      dt_in_range = (dt_in_range && time_in_range);
-    } catch (std::exception& e) {}
+  // Is the dominant case DOW and time only - if so we should handle that
+  // early and return (avoid the other computations)
+  if (type != kNthDow && type != kYMD) {
+    // Only time is included
+    if (begin_hrs || begin_mins || end_hrs || end_mins) {
+      b_td = begin_hrs * 60 + begin_mins;
+      e_td = end_hrs * 60 + end_mins;
+    }
+    if (begin_hrs > end_hrs) { // 19:00 - 06:00
+      dt_in_range = !(e_td <= td && td <= b_td);
+    } else {
+      dt_in_range = (b_td <= td && td <= e_td);
+    }
+    printf("just time dt_in_range %d b_td %d e_td %d td %d\n", dt_in_range, b_td, e_td, td);
     return (dow_in_range && dt_in_range);
-  **/
+  }
+
+  // Get the begin month
+  //  Su[-1] ????
+  uint8_t b_month = begin_month;
+  if (type == kNthDow && begin_week && !begin_day_dow && !begin_month) {
+    b_month = t.tm_mon; // d.month().as_enum(); ??
+  }
+
+  // Get the end month
+  // Su[-1] ??
+  uint8_t e_month = end_month;
+  if (type == kNthDow && end_week && !end_day_dow && !end_month) {
+    e_month = t.tm_mon; // d.month().as_enum(); ??
+  }
+
+  uint8_t b_day_dow = begin_day_dow;
+  uint8_t e_day_dow = end_day_dow;
+  uint8_t b_week = begin_week;
+  uint8_t e_week = end_week;
+  if (type == kNthDow && begin_week && !begin_day_dow && !begin_month && !end_week && !end_day_dow &&
+      !end_month) { // only Su[-1] set in begin.
+    // First Sunday of every month only.
+    e_month = b_month;
+    b_day_dow = e_day_dow = dow;
+    e_week = b_week;
+  } else if (type == kYMD && (b_month && e_month) &&
+             (!b_day_dow && !e_day_dow)) { // Sep-Jun We 08:15-08:45
+    b_day_dow = 1;
+    std::tm e_d = {t.tm_year, e_month, 1, 0, 0, 0, 0, 0};
+    std::mktime(&t);
+    e_day_dow = e_d.tm_wday;
+    // TODO - does this say find the DOW of the last day of the month?
+    //  boost::gregorian::date e_d = boost::gregorian::date(d.year(), e_month, 1);
+    //   e_day_dow = e_d.end_of_month().day();
+  }
+
+
+  // month only
+  if (type == kYMD && (b_month && e_month) && (!b_day_dow && !e_day_dow && !b_week && !b_week) &&
+      b_month == e_month) {
+    dt_in_range = (b_month <= t.tm_mon && t.tm_mon <= e_month);
+    if (begin_hrs || begin_mins || end_hrs || end_mins) {
+      b_td = begin_hrs * 60 + begin_mins;
+      e_td = end_hrs * 60 + end_mins;
+    }
+    dt_in_range = (dt_in_range && (b_td <= td && td <= e_td));
+    return (dow_in_range && dt_in_range);
+  } else if (type == kYMD && b_month && b_day_dow) {
+    /**
+       uint32_t e_year = d.year(), b_year = d.year();
+       if (b_month == e_month) {
+         if (b_day_dow > e_day_dow) { // Mar 15 - Mar 1
+           e_year = d.year() + 1;
+         }
+       } else if (b_month > e_month) { // Oct 10 - Mar 3
+         if (b_month > d.month().as_enum()) {
+           b_year = d.year() - 1;
+         } else {
+           e_year = d.year() + 1;
+         }
+       }
+
+       begin_date = boost::gregorian::date(b_year, b_month, b_day_dow);
+       end_date = boost::gregorian::date(e_year, e_month, e_day_dow);
+   **/
+  } else if (type == kNthDow && b_month && b_day_dow && e_month &&
+             e_day_dow) { // kNthDow types can have a mix of ymd and nthdow. (e.g. Dec Su[-1]-Mar
+                          // 3 Sat 15:00-17:00)
+                          /**
+                             uint32_t e_year = d.year(), b_year = d.year();
+                             if (b_month == e_month) {
+                               if (b_day_dow > e_day_dow) { // Mar 15 - Mar 1
+                                 e_year = d.year() + 1;
+                               }
+                             } else if (b_month > e_month) { // Oct 10 - Mar 3
+                               if (b_month > d.month().as_enum()) {
+                                 b_year = d.year() - 1;
+                               } else {
+                                 e_year = d.year() + 1;
+                               }
+                             }
+                      
+                             if (b_week && b_week <= 5) { // kNthDow
+                               boost::gregorian::nth_day_of_the_week_in_month
+                                  nthdow(static_cast<boost::gregorian::nth_day_of_the_week_in_month::week_num>(b_week),
+                                       b_day_dow - 1, b_month);
+                               begin_date = nthdow.get_date(b_year);
+                             } else { // YMD
+                               begin_date = boost::gregorian::date(b_year, b_month, b_day_dow);
+                             }
+                      
+                             if (e_week && e_week <= 5) { // kNthDow
+                               boost::gregorian::nth_day_of_the_week_in_month
+                                nthdow(static_cast<boost::gregorian::nth_day_of_the_week_in_month::week_num>(e_week),
+                                       e_day_dow - 1, e_month);
+                               end_date = nthdow.get_date(e_year);
+                             } else {                                                         // YMD
+                               end_date = boost::gregorian::date(e_year, e_month, e_day_dow); // Dec 5 to Mar 3
+                             }
+                          **/
+  }
+
+  // See if time is in range
+  if (begin_hrs || begin_mins || end_hrs || end_mins) {
+    b_td = begin_hrs * 60 + begin_mins;
+    e_td = end_hrs * 60 + end_mins;
+  }
+
+ //   boost::local_time::local_date_time b_in_local_time = get_ldt(begin_date, b_td, time_zone);
+ //   boost::local_time::local_date_time e_in_local_time = get_ldt(end_date, e_td, time_zone);
+ //   dt_in_range = (b_in_local_time.date() <= in_local_time.date() &&
+ //                  in_local_time.date() <= e_in_local_time.date());
+  dt_in_range = true;  // TEMP
+  bool time_in_range = false;
+  if (begin_hrs > end_hrs) { // 19:00 - 06:00
+    time_in_range = !(e_td <= td && td <= b_td);
+  } else {
+    time_in_range = (b_td <= td && td <= e_td);
+  }
+  return (dow_in_range && time_in_range && dt_in_range);
 }
 
 } // namespace DateTime

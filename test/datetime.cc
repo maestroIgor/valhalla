@@ -84,17 +84,15 @@ void TryTestDST(const bool is_depart_at,
 }
 
 void TryIsRestricted(const TimeDomain td, const std::string& date, const bool expected_value) {
-  /**
-    auto tz = DateTime::get_tz_db().from_index(DateTime::get_tz_db().to_index("America/New_York"));
-
-    if (DateTime::is_restricted(td.type(), td.begin_hrs(), td.begin_mins(), td.end_hrs(),
-  td.end_mins(), td.dow(), td.begin_week(), td.begin_month(), td.begin_day_dow(), td.end_week(),
-  td.end_month(), td.end_day_dow(), DateTime::seconds_since_epoch(date, tz), tz) != expected_value) {
-
-      throw std::runtime_error("Is Restricted " + date +
-                               " test failed.  Expected: " + std::to_string(expected_value));
-    }
-  **/
+  auto index = DateTime::GetTimezoneDB().to_index("America/New_York");
+  auto tz = DateTime::GetTimezoneDB().from_index(index);
+  if (DateTime::is_restricted(td.type(), td.begin_hrs(), td.begin_mins(), td.end_hrs(), td.end_mins(),
+                              td.dow(), td.begin_week(), td.begin_month(), td.begin_day_dow(),
+                              td.end_week(), td.end_month(), td.end_day_dow(),
+                              DateTime::seconds_since_epoch(date, tz), tz) != expected_value) {
+    throw std::runtime_error("Is Restricted " + date +
+                             " test failed.  Expected: " + std::to_string(expected_value));
+  }
 }
 
 // Convert seconds to a date string (for test evaluation only). DateTime holds a more general
@@ -306,14 +304,24 @@ void TestDST() {
 }
 
 void TestIsRestricted() {
+  // DOW and time - with a date when Daylight Savings Time is not in effect
+  TimeDomain td = TimeDomain(23622321788); // Mo-Fr 06:00-11:00
+  TryIsRestricted(td, "2018-11-13T05:00", false);
+  TryIsRestricted(td, "2018-11-13T06:00", true);
+  TryIsRestricted(td, "2018-11-13T10:00", true);
+  TryIsRestricted(td, "2018-11-13T11:00", true);
+  TryIsRestricted(td, "2018-11-13T11:11", false);
 
+  // Try a date when DST is in effect
+/**
   TimeDomain td = TimeDomain(23622321788); // Mo-Fr 06:00-11:00
   TryIsRestricted(td, "2018-04-17T05:00", false);
   TryIsRestricted(td, "2018-04-17T06:00", true);
   TryIsRestricted(td, "2018-04-17T10:00", true);
   TryIsRestricted(td, "2018-04-17T11:00", true);
   TryIsRestricted(td, "2018-04-17T11:11", false);
-
+**/
+  /*
   td = TimeDomain(40802435968); // Sa 03:30-19:00
   TryIsRestricted(td, "2018-04-17T11:11", false);
   TryIsRestricted(td, "2018-04-21T03:00", false);
@@ -413,6 +421,7 @@ void TestIsRestricted() {
   TryIsRestricted(td, "2019-01-06T08:30", false);
   TryIsRestricted(td, "2019-03-02T08:30", true);
   TryIsRestricted(td, "2019-03-03T08:30", false);
+**/
 }
 
 void TestTimezoneDiff() {
